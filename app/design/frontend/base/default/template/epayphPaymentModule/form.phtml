@@ -1,0 +1,8 @@
+<ul class="form-list" id="payment_form_<?php echo $this->getMethodCode() ?>" style="display:none;">
+	<?php 
+	$showEpayphLogo = Mage::getStoreConfig('payment/epayphPaymentModule/showEpayphLogo');
+	if ($showEpayphLogo) {
+	echo "<img src=" . $this->getSkinUrl('../../epayphPaymentModule/default/epayph-sm-no-bg.png') . " />"; 
+	}?>
+    <li class="form-alt"><?php echo $this->getRedirectMessage() ?></li>
+</ul>

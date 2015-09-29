@@ -1,0 +1,111 @@
+<?php
+/**
+ * EpayPh Payment Module for Magento > 1.6
+ *
+ * @category    EpayPh
+ * @package     Neuralink_EpayphPaymentModule
+ * @copyright   Copyright (c) 2015 Neuralink Inc. (https://www.epay.ph)
+ * @autor       Paolo Abadesco <admin@epay.ph>
+ * @version   	0.0.1
+ * @license     http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
+ */
+
+// Get User Configuration
+$epayphId = Mage::getStoreConfig('payment/epayphPaymentModule/epayphId');
+$apiKey = Mage::getStoreConfig('payment/epayphPaymentModule/epayphApiKey');
+$apiSecret = Mage::getStoreConfig('payment/epayphPaymentModule/epayphApiSecret');
+$testMode = Mage::getStoreConfig('payment/epayphPaymentModule/epayphTestMode');
+$allowGuestCheckout =  Mage::getStoreConfig('payment/epayphPaymentModule/epayphGuestCheckout');
+
+
+// Grab the user's order
+$magOrderId = Mage::getSingleton('checkout/session')->getLastRealOrderId();
+$order = Mage::getModel('sales/order')->loadByIncrementId($magOrderId);
+$billing = $order->getBillingAddress();
+$shipping = $order->getShippingAddress();
+$amount = round($order->getGrandTotal(), 2);
+
+$items = array();
+foreach($order->getItemsCollection() as $item) {
+	if($item->getQtyToShip() > 0) {
+		$items[] = array(
+			'Description'	=> $item->getSku() . ': ' . ($item->getDescription() ? $item->getDescription() : 'N/A'),
+			'item_name'			=> $item->getName(),
+			'amount'			=> $item->getPrice(),
+			'quantity'		=> $item->getQtyToShip()
+		);
+	}
+}
+
+$epayph_args = array(
+	'cmd'           => '_cart',
+	'business'      => $epayphId,
+	'no_note'       => 1,
+	'currency_code' => $order->getOrderCurrencyCode(),
+	'charset'       => 'utf-8',
+	//'rm'            => is_ssl() ? 2 : 1,
+	'upload'        => 1,
+	'return'        => Mage::getUrl('epayphPaymentModule/payment/response', array('_secure' => true)),
+	'cancel_return' => Mage::getUrl('epayphPaymentModule/payment/response', array('_secure' => true)),
+	'bn'            => 'Magento_Cart',
+	'invoice'       => $magOrderId,
+	'custom'        => $magOrderId,
+	'notify_url'    => Mage::getUrl('epayphPaymentModule/payment/response', array('_secure' => true)),
+	'first_name'    => $billing->getFirstname(),
+	'last_name'     => $billing->getLastname(),
+	'company'       => '',
+	'address1'      => $billing->getStreet(1),
+	'address2'      => $billing->getStreet(2),
+	'city'          => $billing->getCity(),
+	'state'         => $billing->getRegion(),
+	'zip'           => $billing->getPostcode(),
+	'country'       => $billing->getCountry(),
+	'email'         => $order->getCustomerEmail(),
+	'phone'			=> $billing->getTelephone(),
+	'affiliate'		=> @$_COOKIE['affiliate'], 
+	'location'		=> $billing->getCity().', '.$billing->getRegion().', '.$billing->getCountry(),
+	"shipping_name" 		=> $shipping->getName(),
+	"shipping_address1" => $shipping->getStreet(1),
+	"shipping_address2" => $shipping->getStreet(2),
+	"shipping_city" 		=> $shipping->getCity(),
+	"shipping_state" 	=> $shipping->getRegion(),
+	"shipping_zip" 		=> $shipping->getPostcode(),
+	"shipping_country" 	=> $shipping->getCountry(),	
+	"shipping_location" => $billing->getCity().', '.$billing->getRegion().', '.$billing->getCountry(),
+	'discount_amount'		=> $order->getDiscountAmount(),
+	'shipping'		=> $order->getShippingAmount(),
+	'tax'			=> $order->getTaxAmount(),
+//	'amount'			=> $order->getGrandTotal(),
+//	'item_name'		=> 'Cart'
+);
+
+$epayph_args_array = array();
+foreach ($epayph_args as $key => $value) {
+	$epayph_args_array[] = "<input type='hidden' name='".$key."' value='". $value ."' />";
+}		
+$items_array = array();
+$items_x = 1;
+foreach ($items as $item) {
+	foreach ($item as $key=>$value){
+		$items_array[] = "<input type='hidden' name='".$key."_".$items_x."' value='". $value ."' />";
+	};
+	$items_x++;
+}		
+
+//header("Location: {$epayphUrl}");
+?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+<head>
+<title>Redirecting to ePay.ph</title>
+<meta http-equiv="REFRESH" content="0;url=<?php echo $epayphUrl; ?>">
+</HEAD>
+<BODY>
+<form action='https://epay.ph/checkout/api/' method='post' id='epayph_payment_form' name='epayph_payment_form'>
+  <?php echo implode('', $epayph_args_array); ?> <?php echo implode('', $items_array); ?>
+  <input type='submit' class='button-alt' id='submit_epayph_payment_form' value='Pay Now' />
+  <script>document.epayph_payment_form.submit();</script>
+</form>
+Redirecting you to ePay.ph...
+</BODY>
+</HTML>

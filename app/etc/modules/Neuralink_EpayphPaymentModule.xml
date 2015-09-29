@@ -1,0 +1,11 @@
+<config>
+    <modules>
+        <Neuralink_EpayphPaymentModule>
+            <active>true</active>
+            <codePool>local</codePool>
+            <depends>
+                <Mage_Payment />
+            </depends>
+        </Neuralink_EpayphPaymentModule>
+    </modules>
+</config>
