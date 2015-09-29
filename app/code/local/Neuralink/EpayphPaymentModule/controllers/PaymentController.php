@@ -91,38 +91,27 @@ class Neuralink_EpayphPaymentModule_PaymentController extends Mage_Core_Controll
 		$apiKey = Mage::getStoreConfig('payment/epayphPaymentModule/epayphApiKey');
 		$apiSecret = Mage::getStoreConfig('payment/epayphPaymentModule/epayphApiSecret');
 
-		// Grab Epay.ph's Response
-		$orderId = $this->getRequest()->orderId;
-		$checkoutId = $this->getRequest()->checkoutId;
-		$transactionId = $this->getRequest()->transaction;
-		$amount = number_format($this->getRequest()->amount, 2);
-		$signature = $this->getRequest()->signature;
-
-		// Check if the user cancelled, or
-		// if there was any other error
-		$isError = $this->getRequest()->error;
-		$errorDescription = $this->getRequest()->error_description;
-
-		if($isError) {
-			return $this->cancelAction($orderId, $errorDescription);
-		}
-
 		$url = 'https://epay.ph/api/validateIPN';
-		$json = json_encode($this->getRequest());
+		$json = json_encode($_POST);
 		$client = new Zend_Http_Client($url);
-		$client->setRawData($json, 'application/json')->request('POST');
-		var_dump($client->request()->getBody());
+		$client->setHeaders(array(
+			'Accept: application/json',
+		));
+		
+		$_POST['cmd'] = '_notify-validate';
+		$client->setParameterPost($_POST);
+		//$client->setRawData($json, 'application/x-www-form-urlencoded')->request('POST');
+		$request = $client->request('POST');
+		//var_dump($client->request()->getBody());
+		
+		mail('pjabadesco@gmail.com','post',json_encode($_POST));
+		mail('pjabadesco@gmail.com','responseAction',$request->getBody());
 
-		// Validate Epay.ph's Signature
-		$string = "{$checkoutId}&{$amount}";
-		$hash = hash_hmac('sha1', $string, $apiSecret);
-		$validated = ($hash == $signature);
-
-		if($validated) {
+		if($request->getBody()=='{"return":"VERIFIED"}') {
 			$order = Mage::getModel('sales/order');
-			$order->loadByIncrementId($orderId);
-			$order->setEpayphTransactionId($transactionId);
-			$order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true, "Epay.ph Gateway informed us: the payment's Transaction ID is {$transactionId} / Checkout ID {$checkoutId}");
+			$order->loadByIncrementId($_POST['invoice']);
+			//$order->setEpayphTransactionId($transactionId);
+			$order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true, "Epay.ph Gateway informed us: the payment's Transaction ID is {$_POST['txn_id']}");
 
 			$order->sendNewOrderEmail();
 			$order->setEmailSent(true);
