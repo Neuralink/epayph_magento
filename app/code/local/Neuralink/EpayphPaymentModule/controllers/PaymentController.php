@@ -107,6 +107,12 @@ class Neuralink_EpayphPaymentModule_PaymentController extends Mage_Core_Controll
 			return $this->cancelAction($orderId, $errorDescription);
 		}
 
+		$url = 'https://epay.ph/api/validateIPN';
+		$json = json_encode($this->getRequest());
+		$client = new Zend_Http_Client($url);
+		$client->setRawData($json, 'application/json')->request('POST');
+		var_dump($client->request()->getBody());
+
 		// Validate Epay.ph's Signature
 		$string = "{$checkoutId}&{$amount}";
 		$hash = hash_hmac('sha1', $string, $apiSecret);
