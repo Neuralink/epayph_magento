@@ -100,17 +100,11 @@ class Neuralink_EpayphPaymentModule_PaymentController extends Mage_Core_Controll
 		
 		$_POST['cmd'] = '_notify-validate';
 		$client->setParameterPost($_POST);
-		//$client->setRawData($json, 'application/x-www-form-urlencoded')->request('POST');
 		$request = $client->request('POST');
-		//var_dump($client->request()->getBody());
-		
-		mail('pjabadesco@gmail.com','post',json_encode($_POST));
-		mail('pjabadesco@gmail.com','responseAction',$request->getBody());
-
+	
 		if($request->getBody()=='{"return":"VERIFIED"}') {
 			$order = Mage::getModel('sales/order');
 			$order->loadByIncrementId($_POST['invoice']);
-			//$order->setEpayphTransactionId($transactionId);
 			$order->setState(Mage_Sales_Model_Order::STATE_PROCESSING, true, "Epay.ph Gateway informed us: the payment's Transaction ID is {$_POST['txn_id']}");
 
 			$order->sendNewOrderEmail();
